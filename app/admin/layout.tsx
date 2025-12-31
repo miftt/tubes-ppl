@@ -1,12 +1,22 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { LayoutDashboard, Users, Mail, LogOut, Menu } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push("/login");
+    router.refresh();
+  };
 
   // MENU ITEMS: Link ke halaman terpisah (Bukan Scroll lagi)
   const menuItems = [
@@ -52,7 +62,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="p-4 border-t border-sidebar-border">
-          <button className="flex items-center gap-3 w-full px-3 py-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-3 py-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+          >
             <LogOut size={20} />
             {isSidebarOpen && <span className="font-medium">Logout</span>}
           </button>
@@ -67,10 +80,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
           <div className="flex items-center gap-3 pl-4 border-l">
                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold">Admin</p>
-                  <p className="text-xs text-muted-foreground">online</p>
+                  <p className="text-sm font-semibold">
+                    {session?.user?.name || session?.user?.username || "Admin"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {session?.user?.role || "User"}
+                  </p>
                </div>
-               <div className="w-9 h-9 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold border border-primary/20">A</div>
+               <div className="w-9 h-9 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold border border-primary/20">
+                 {(session?.user?.name || session?.user?.username || "A").charAt(0).toUpperCase()}
+               </div>
           </div>
         </header>
 
