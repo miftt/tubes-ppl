@@ -64,7 +64,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl font-serif font-bold mb-2">DAnews Panel</h1>
           <p className="text-sm text-muted-foreground">
-            Masuk ke dashboard admin
+            Masuk untuk mendapatkan berita terbaru
           </p>
         </div>
 
