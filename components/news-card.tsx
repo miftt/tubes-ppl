@@ -10,12 +10,15 @@ interface NewsCardProps {
   date: string
   featured?: boolean
   horizontal?: boolean
+  link?: string
 }
 
-export function NewsCard({ title, excerpt, image, category, date, featured, horizontal }: NewsCardProps) {
+export function NewsCard({ title, excerpt, image, category, date, featured, horizontal, link }: NewsCardProps) {
+  const href = link || "#";
+  
   if (horizontal) {
     return (
-      <Link href="#" className="group flex gap-4 items-start py-3 border-b last:border-0">
+      <Link href={href} target={link ? "_blank" : undefined} rel={link ? "noopener noreferrer" : undefined} className="group flex gap-4 items-start py-3 border-b last:border-0">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm">
           <Image
             src={image || "/placeholder.svg"}
@@ -36,7 +39,9 @@ export function NewsCard({ title, excerpt, image, category, date, featured, hori
 
   return (
     <Link
-      href="#"
+      href={href}
+      target={link ? "_blank" : undefined}
+      rel={link ? "noopener noreferrer" : undefined}
       className={cn(
         "group flex flex-col gap-4 overflow-hidden rounded-lg transition-all duration-300",
         featured ? "lg:col-span-2 border-b pb-8" : "pb-4",

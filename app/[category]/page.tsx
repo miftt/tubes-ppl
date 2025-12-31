@@ -3,6 +3,7 @@ import Image from "next/image"
 import { Navbar } from "@/components/navbar"
 import { NewsCard } from "@/components/news-card"
 import { Item } from "rss-parser"
+import { notFound } from "next/navigation"
 
 interface NewsItem extends Item {
   image?: {
@@ -11,75 +12,46 @@ interface NewsItem extends Item {
   };
 }
 
-async function getCNNNews() {
+const VALID_CATEGORIES = [
+  "nasional",
+  "internasional",
+  "ekonomi",
+  "olahraga",
+  "teknologi",
+  "hiburan",
+  "gaya-hidup",
+];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  "nasional": "Nasional",
+  "internasional": "Internasional",
+  "ekonomi": "Ekonomi",
+  "olahraga": "Olahraga",
+  "teknologi": "Teknologi",
+  "hiburan": "Hiburan",
+  "gaya-hidup": "Gaya Hidup",
+};
+
+async function getCNNNewsByCategory(category: string) {
   try {
-    // For server components, construct the absolute URL
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     
-    // Fetch from multiple categories to get more news
-    const categories = ['nasional', 'internasional', 'ekonomi', 'olahraga', 'teknologi', 'hiburan', 'gaya-hidup'];
-    
-    // Fetch all categories in parallel
-    const promises = [
-      fetch(`${baseUrl}/api/cnn?fetch=true`, {
-        cache: "no-store",
-        headers: { 'Content-Type': 'application/json' },
-      }),
-      ...categories.map(category => 
-        fetch(`${baseUrl}/api/cnn/${category}`, {
-          cache: "no-store",
-          headers: { 'Content-Type': 'application/json' },
-        })
-      )
-    ];
-    
-    const responses = await Promise.allSettled(promises);
-    
-    // Combine all results
-    const allNews: NewsItem[] = [];
-    const seenLinks = new Set<string>();
-    
-    for (const response of responses) {
-      if (response.status === 'fulfilled' && response.value.ok) {
-        const data = await response.value.json();
-        const items = data.data || [];
-        
-        // Add items that haven't been seen before (deduplicate)
-        for (const item of items) {
-          if (item.link && !seenLinks.has(item.link)) {
-            seenLinks.add(item.link);
-            allNews.push(item);
-          }
-        }
-      }
-    }
-    
-    // Sort by date (newest first)
-    allNews.sort((a, b) => {
-      const dateA = a.isoDate ? new Date(a.isoDate).getTime() : 0;
-      const dateB = b.isoDate ? new Date(b.isoDate).getTime() : 0;
-      return dateB - dateA;
+    const res = await fetch(`${baseUrl}/api/cnn/${category}`, {
+      cache: "no-store",
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
     
-    return allNews;
-  } catch (error) {
-    console.error("Error fetching CNN news:", error);
-    // Fallback to single fetch if parallel fails
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-      const res = await fetch(`${baseUrl}/api/cnn?fetch=true`, {
-        cache: "no-store",
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return data.data || [];
-      }
-    } catch (fallbackError) {
-      console.error("Fallback fetch also failed:", fallbackError);
+    if (!res.ok) {
+      throw new Error("Failed to fetch news");
     }
+    
+    const data = await res.json();
+    return data.data || [];
+  } catch (error) {
+    console.error(`Error fetching CNN news for category ${category}:`, error);
     return [];
   }
 }
@@ -113,9 +85,27 @@ function getCategoryFromLink(link?: string): string {
   return "";
 }
 
-export default async function HomePage() {
-  const newsItems = await getCNNNews() as NewsItem[];
+export async function generateStaticParams() {
+  return VALID_CATEGORIES.map((category) => ({
+    category: category,
+  }));
+}
+
+export default async function CategoryPage({
+  params,
+}: {
+  params: Promise<{ category: string }>
+}) {
+  const { category } = await params;
   
+  // Validate category
+  if (!VALID_CATEGORIES.includes(category)) {
+    notFound();
+  }
+
+  const newsItems = await getCNNNewsByCategory(category) as NewsItem[];
+  const categoryLabel = CATEGORY_LABELS[category] || category;
+
   // Get featured news (first item)
   const featuredNews = newsItems.length > 0 ? newsItems[0] : null;
   
@@ -123,7 +113,10 @@ export default async function HomePage() {
   const recentNews = newsItems.slice(1, 25);
   
   // Get popular news titles (items 0-15 for more popular items)
-  const popularNews = newsItems.slice(0, 15).map(item => item.title || "").filter(Boolean);
+  const popularNews = newsItems.slice(0, 15).map(item => ({
+    title: item.title || "",
+    link: item.link || "#",
+  })).filter(item => item.title);
   
   // Get recommendations (items 25-35 for more recommendations)
   const recommendations = newsItems.slice(25, 36);
@@ -133,6 +126,12 @@ export default async function HomePage() {
       <Navbar />
 
       <main className="container mx-auto px-4 py-12 flex-1">
+        {/* Category Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-serif font-bold mb-2">{categoryLabel}</h1>
+          <p className="text-muted-foreground">Berita terkini seputar {categoryLabel.toLowerCase()}</p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Main Feed */}
           <div className="lg:col-span-8 flex flex-col gap-12">
@@ -140,7 +139,7 @@ export default async function HomePage() {
             {featuredNews && (
               <NewsCard
                 featured
-                category={getCategoryFromLink(featuredNews.link)}
+                category={categoryLabel}
                 date={formatDate(featuredNews.isoDate)}
                 title={featuredNews.title || ""}
                 excerpt={featuredNews.contentSnippet || featuredNews.content || ""}
@@ -150,19 +149,25 @@ export default async function HomePage() {
             )}
 
             {/* Recent News Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
-              {recentNews.map((news, index) => (
-                <NewsCard
-                  key={news.link || index}
-                  date={formatDate(news.isoDate)}
-                  category={getCategoryFromLink(news.link)}
-                  title={news.title || ""}
-                  excerpt={news.contentSnippet || news.content || ""}
-                  image={news.image?.large || news.image?.small || "/placeholder.svg"}
-                  link={news.link}
-                />
-              ))}
-            </div>
+            {recentNews.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
+                {recentNews.map((news, index) => (
+                  <NewsCard
+                    key={news.link || index}
+                    date={formatDate(news.isoDate)}
+                    category={getCategoryFromLink(news.link)}
+                    title={news.title || ""}
+                    excerpt={news.contentSnippet || news.content || ""}
+                    image={news.image?.large || news.image?.small || "/placeholder.svg"}
+                    link={news.link}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Tidak ada berita tersedia untuk kategori ini.</p>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -171,23 +176,20 @@ export default async function HomePage() {
             <section>
               <h3 className="text-xs font-bold uppercase tracking-[0.3em] border-b pb-4 mb-6">Berita Terpopuler</h3>
               <div className="flex flex-col gap-6">
-                {popularNews.slice(0, 10).map((title, i) => {
-                  const item = newsItems[i];
-                  return item ? (
-                    <Link 
-                      key={i} 
-                      href={item.link || "#"} 
-                      target={item.link ? "_blank" : undefined}
-                      rel={item.link ? "noopener noreferrer" : undefined}
-                      className="group flex gap-4 items-start"
-                    >
-                      <span className="text-3xl font-serif text-muted-foreground/30 font-bold leading-none">{i + 1}</span>
-                      <p className="text-sm font-medium leading-tight group-hover:text-primary transition-colors">
-                        {title}
-                      </p>
-                    </Link>
-                  ) : null;
-                })}
+                {popularNews.map((item, i) => (
+                  <Link 
+                    key={i} 
+                    href={item.link} 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex gap-4 items-start"
+                  >
+                    <span className="text-3xl font-serif text-muted-foreground/30 font-bold leading-none">{i + 1}</span>
+                    <p className="text-sm font-medium leading-tight group-hover:text-primary transition-colors">
+                      {item.title}
+                    </p>
+                  </Link>
+                ))}
               </div>
             </section>
 
@@ -242,7 +244,11 @@ export default async function HomePage() {
                   <Link
                     key={cat.href}
                     href={cat.href}
-                    className="px-3 py-1.5 text-xs font-medium bg-muted hover:bg-primary hover:text-primary-foreground rounded-sm transition-colors"
+                    className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                      cat.href === `/${category}`
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted hover:bg-primary hover:text-primary-foreground"
+                    }`}
                   >
                     {cat.label}
                   </Link>
@@ -250,9 +256,9 @@ export default async function HomePage() {
               </div>
             </section>
 
-            {/* More News */}
+            {/* More from Category */}
             <section>
-              <h3 className="text-xs font-bold uppercase tracking-[0.3em] border-b pb-4 mb-4">Berita Lainnya</h3>
+              <h3 className="text-xs font-bold uppercase tracking-[0.3em] border-b pb-4 mb-4">Lainnya dari {categoryLabel}</h3>
               <div className="flex flex-col gap-3">
                 {newsItems.slice(36, 42).map((news, index) => (
                   <Link
@@ -341,3 +347,4 @@ export default async function HomePage() {
     </div>
   )
 }
+
