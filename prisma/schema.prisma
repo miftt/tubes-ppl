@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  slug        String    @unique @db.VarChar(50)
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  articles    Article[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("categories")
+}
+
+model Article {
+  id             Int       @id @default(autoincrement())
+  title          String    @db.VarChar(500)
+  slug           String    @db.VarChar(500)
+  excerpt        String?   @db.Text
+  content        String?   @db.LongText
+  contentSnippet String?   @map("content_snippet") @db.Text
+  sourceLink     String    @map("source_link") @db.VarChar(1000)
+  imageSmall     String?   @map("image_small") @db.VarChar(1000)
+  imageLarge     String?   @map("image_large") @db.VarChar(1000)
+  categoryId     Int?      @map("category_id")
+  author         String?   @db.VarChar(200)
+  publishedDate  DateTime? @map("published_date")
+  isoDate        String?   @map("iso_date") @db.VarChar(50)
+  viewCount      Int       @default(0) @map("view_count")
+  isFeatured     Boolean   @default(false) @map("is_featured")
+  isPublished    Boolean   @default(true) @map("is_published")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  
+  category       Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  views          ArticleView[]
+  popularArticle PopularArticle?
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@index([publishedDate])
+  @@index([sourceLink(length: 255)])
+  @@fulltext([title, excerpt, contentSnippet])
+  @@map("articles")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique @db.VarChar(100)
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  role         UserRole  @default(Member)
+  status       UserStatus @default(Aktif)
+  fullName     String?   @map("full_name") @db.VarChar(200)
+  avatar       String?   @db.VarChar(500)
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  bookmarks    Bookmark[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model Subscriber {
+  id                Int              @id @default(autoincrement())
+  email             String           @unique @db.VarChar(255)
+  status            SubscriberStatus @default(Aktif)
+  subscribedAt      DateTime         @default(now()) @map("subscribed_at")
+  unsubscribedAt    DateTime?        @map("unsubscribed_at")
+  verificationToken String?          @map("verification_token") @db.VarChar(100)
+  isVerified        Boolean          @default(false) @map("is_verified")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([status])
+  @@index([subscribedAt])
+  @@map("subscribers")
+}
+
+model ArticleView {
+  id        Int      @id @default(autoincrement())
+  articleId Int      @map("article_id")
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.Text
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+  
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([viewedAt])
+  @@map("article_views")
+}
+
+model PopularArticle {
+  id          Int      @id @default(autoincrement())
+  articleId   Int      @unique @map("article_id")
+  viewCount   Int      @default(0) @map("view_count")
+  lastUpdated DateTime @default(now()) @updatedAt @map("last_updated")
+  
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([viewCount(sort: Desc)])
+  @@map("popular_articles")
+}
+
+model SearchLog {
+  id           Int      @id @default(autoincrement())
+  query        String   @db.VarChar(500)
+  resultsCount Int      @default(0) @map("results_count")
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  searchedAt   DateTime @default(now()) @map("searched_at")
+
+  @@index([query(length: 255)])
+  @@index([searchedAt])
+  @@map("search_logs")
+}
+
+model Bookmark {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  articleLink     String   @map("article_link") @db.VarChar(1000)
+  articleTitle    String   @map("article_title") @db.VarChar(500)
+  articleImage    String?  @map("article_image") @db.VarChar(1000)
+  articleCategory String?  @map("article_category") @db.VarChar(100)
+  articleDate     String?  @map("article_date") @db.VarChar(50)
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleLink(length: 255)])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("bookmarks")
+}
+
+// Enums
+enum UserRole {
+  Admin
+  Editor
+  Member
+}
+
+enum UserStatus {
+  Aktif
+  Nonaktif
+}
+
+enum SubscriberStatus {
+  Aktif
+  Nonaktif
+  Unsubscribed
+}

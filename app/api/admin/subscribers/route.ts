@@ -1,25 +1,24 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
+import { SubscriberData } from "@/types/subscriber";
 
 export async function GET() {
   try {
-    const rows = await query<{
-      id: number;
-      email: string;
-      status: string;
-      subscribed_at: Date | string | null;
-    }>(
-      "SELECT id, email, status, subscribed_at FROM subscribers ORDER BY subscribed_at DESC"
-    );
+    const subscribers = await prisma.subscriber.findMany({
+      orderBy: { subscribedAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        status: true,
+        subscribedAt: true
+      }
+    });
 
-    const data = rows.map((row) => ({
+    const data = subscribers.map((row: SubscriberData) => ({
       id: row.id,
       email: row.email,
       status: row.status,
-      joined:
-        row.subscribed_at instanceof Date
-          ? row.subscribed_at.toISOString().slice(0, 10)
-          : (row.subscribed_at ?? "").toString().slice(0, 10),
+      joined: row.subscribedAt ? row.subscribedAt.toISOString().slice(0, 10) : "",
     }));
 
     return NextResponse.json(data);

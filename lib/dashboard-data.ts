@@ -1,23 +1,23 @@
-import { query } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
+import { UserStatus, SubscriberStatus } from "@prisma/client";
 
 // Mengambil data statistik dashboard langsung dari database (tabel users & subscribers)
 export async function getDashboardStats() {
   // 1. Hitung Total User
-  const totalUsers: any = await query("SELECT COUNT(*) as count FROM users");
+  const totalUsersCount = await prisma.user.count();
   
   // 2. Hitung User Aktif
-  const activeUsers: any = await query("SELECT COUNT(*) as count FROM users WHERE status = 'Aktif'");
+  const activeUsersCount = await prisma.user.count({
+    where: { status: UserStatus.Aktif }
+  });
 
   // 3. Hitung Total Subscriber
-  const totalSubscribers: any = await query("SELECT COUNT(*) as count FROM subscribers");
+  const totalSubscribersCount = await prisma.subscriber.count();
 
   // 4. Hitung Subscriber Aktif
-  const activeSubscribers: any = await query("SELECT COUNT(*) as count FROM subscribers WHERE status = 'Aktif'");
-
-  const totalUsersCount = Number(totalUsers[0]?.count ?? 0) || 0;
-  const activeUsersCount = Number(activeUsers[0]?.count ?? 0) || 0;
-  const totalSubscribersCount = Number(totalSubscribers[0]?.count ?? 0) || 0;
-  const activeSubscribersCount = Number(activeSubscribers[0]?.count ?? 0) || 0;
+  const activeSubscribersCount = await prisma.subscriber.count({
+    where: { status: SubscriberStatus.Aktif }
+  });
 
   return {
     totalUsers: totalUsersCount,

@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
-import { query, queryOne, getDatabaseConnection } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Cek apakah username sudah ada
-    const existingUsername = await queryOne(
-      `SELECT id FROM users WHERE username = ?`,
-      [username]
-    );
+    const existingUsername = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true }
+    });
 
     if (existingUsername) {
       return NextResponse.json(
@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Cek apakah email sudah ada
-    const existingEmail = await queryOne(
-      `SELECT id FROM users WHERE email = ?`,
-      [email]
-    );
+    const existingEmail = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true }
+    });
 
     if (existingEmail) {
       return NextResponse.json(
@@ -72,61 +72,54 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(password);
 
     // Insert user baru dengan role Member
-    const connection = await getDatabaseConnection();
-    try {
-      const [result]: any = await connection.execute(
-        `INSERT INTO users (username, email, password_hash, full_name, role, status) 
-         VALUES (?, ?, ?, ?, 'Member', 'Aktif')`,
-        [username, email, passwordHash, fullName || null]
-      );
-      const userId = result.insertId;
-
-      // Jika user memilih subscribe newsletter, tambahkan ke tabel subscribers
-      if (subscribeNewsletter) {
-        try {
-          // Cek apakah email sudah ada di subscribers
-          const existingSubscriber = await queryOne(
-            `SELECT id FROM subscribers WHERE email = ?`,
-            [email]
-          );
-
-          if (!existingSubscriber) {
-            // Insert ke subscribers
-            await query(
-              `INSERT INTO subscribers (email, status, is_verified) 
-               VALUES (?, 'Aktif', TRUE)`,
-              [email]
-            );
-          } else {
-            // Update status jika sudah ada tapi nonaktif
-            await query(
-              `UPDATE subscribers SET status = 'Aktif', is_verified = TRUE WHERE email = ?`,
-              [email]
-            );
-          }
-        } catch (subscriberError) {
-          // Log error tapi tidak gagalkan registrasi
-          console.error('Error adding subscriber:', subscriberError);
-        }
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        email,
+        passwordHash,
+        fullName: fullName || null,
+        role: 'Member',
+        status: 'Aktif'
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true
       }
+    });
 
-      connection.release();
-
-      return NextResponse.json(
-        {
-          message: 'Registrasi berhasil',
-          user: {
-            id: userId,
-            username,
-            email,
+    // Jika user memilih subscribe newsletter, tambahkan ke tabel subscribers
+    if (subscribeNewsletter) {
+      try {
+        await prisma.subscriber.upsert({
+          where: { email },
+          update: {
+            status: 'Aktif',
+            isVerified: true
           },
-        },
-        { status: 201 }
-      );
-    } catch (dbError: any) {
-      connection.release();
-      throw dbError;
+          create: {
+            email,
+            status: 'Aktif',
+            isVerified: true
+          }
+        });
+      } catch (subscriberError) {
+        // Log error tapi tidak gagalkan registrasi
+        console.error('Error adding subscriber:', subscriberError);
+      }
     }
+
+    return NextResponse.json(
+      {
+        message: 'Registrasi berhasil',
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error('Register error:', error);
     return NextResponse.json(
@@ -135,4 +128,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

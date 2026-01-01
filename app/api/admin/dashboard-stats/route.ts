@@ -1,24 +1,34 @@
 import { NextResponse } from "next/server";
-import { queryOne } from "@/lib/db";
-
-type RawDashboardRow = {
-  total_users: number | string | null;
-  total_subscribers: number | string | null;
-  total_articles: number | string | null;
-  articles_today: number | string | null;
-};
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const row = await queryOne<RawDashboardRow>(
-      "SELECT * FROM v_dashboard_stats"
-    );
+    // Get counts using Prisma aggregations
+    const [totalUsers, totalSubscribers, totalArticles, articlesToday] = await Promise.all([
+      prisma.user.count({
+        where: { status: 'Aktif' }
+      }),
+      prisma.subscriber.count({
+        where: { status: 'Aktif' }
+      }),
+      prisma.article.count({
+        where: { isPublished: true }
+      }),
+      prisma.article.count({
+        where: {
+          isPublished: true,
+          createdAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      })
+    ]);
 
     const body = {
-      total_users: Number(row?.total_users ?? 0) || 0,
-      total_subscribers: Number(row?.total_subscribers ?? 0) || 0,
-      total_articles: Number(row?.total_articles ?? 0) || 0,
-      articles_today: Number(row?.articles_today ?? 0) || 0,
+      total_users: totalUsers,
+      total_subscribers: totalSubscribers,
+      total_articles: totalArticles,
+      articles_today: articlesToday,
     };
 
     return NextResponse.json(body);

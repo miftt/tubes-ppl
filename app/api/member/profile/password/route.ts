@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-// Import dari folder [...nextauth] yang benar
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; 
-import { query, queryOne } from "@/lib/db"; 
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 
 export async function PATCH(req: Request) {
@@ -21,18 +20,17 @@ export async function PATCH(req: Request) {
     }
 
     // 2. Ambil Password Lama (Hash) dari Database
-    // Sesuaikan nama tabel 'users' dan kolom 'password_hash' dengan DB kamu
-    const user = await queryOne<{ password_hash: string }>(
-      "SELECT password_hash FROM users WHERE id = ?", 
-      [userId]
-    );
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true }
+    });
 
     if (!user) {
       return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
     }
 
     // 3. Bandingkan Password Inputan User vs Hash di DB
-    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isMatch) {
       return NextResponse.json({ error: "Password lama salah!" }, { status: 400 });
     }
@@ -41,10 +39,10 @@ export async function PATCH(req: Request) {
     const newHash = await bcrypt.hash(newPassword, 10);
 
     // 5. Update ke Database
-    await query(
-      "UPDATE users SET password_hash = ? WHERE id = ?", 
-      [newHash, userId]
-    );
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash }
+    });
 
     return NextResponse.json({ message: "Password berhasil diubah" });
 

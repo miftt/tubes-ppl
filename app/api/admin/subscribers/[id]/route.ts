@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const id = Number(params.id);
@@ -9,10 +9,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   try {
     // Secara bisnis: tandai sebagai Unsubscribed + isi unsubscribed_at
-    await query(
-      "UPDATE subscribers SET status = 'Unsubscribed', unsubscribed_at = NOW() WHERE id = ?",
-      [id]
-    );
+    await prisma.subscriber.update({
+      where: { id },
+      data: {
+        status: 'Unsubscribed',
+        unsubscribedAt: new Date()
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

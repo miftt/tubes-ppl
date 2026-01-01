@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
           // Verify password
           const isPasswordValid = await verifyPassword(
             credentials.password,
-            user.password_hash
+            user.passwordHash
           );
 
           if (!isPasswordValid) {
@@ -43,7 +43,7 @@ export const authOptions: NextAuthOptions = {
           // Return user object untuk session
           return {
             id: user.id.toString(),
-            name: user.full_name || user.username,
+            name: user.fullName || user.username,
             email: user.email,
             role: user.role,
             username: user.username,

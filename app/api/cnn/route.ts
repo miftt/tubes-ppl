@@ -1,27 +1,14 @@
 import { parseRSS, replaceQueryParams, search } from "@/lib/rss-utils";
 import { NextResponse, NextRequest } from "next/server";
 import { Item } from "rss-parser";
-
-type ResponseData = {
-  message?: string;
-  messages?: string;
-  total?: number;
-  data?: ({
-    [key: string]: any;
-  } & Item)[];
-  "CNN News"?: {
-    all: string;
-    type: string;
-    listType: string[];
-  };
-};
+import { RSSItemWithImage, CNNNewsResponse } from "@/types/rss";
 
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const searchParams = url.searchParams.get("search");
     const fetchParam = url.searchParams.get("fetch");
-    
+
     // If no search param and no fetch param, return endpoint information
     if (!searchParams && !fetchParam) {
       return NextResponse.json({
@@ -48,26 +35,27 @@ export async function GET(request: NextRequest) {
       url: CNN_NEWS_RSS,
     });
 
-    const data = result.items.map((items) => {
+    const data = result.items.map((items: Item): RSSItemWithImage => {
+      const itemWithImage = items as any;
       const image = replaceQueryParams(
         items?.enclosure?.url as string,
         "q",
         "100"
       );
-      delete items.pubDate;
-      delete items["content:encoded"];
-      delete items["content:encodedSnippet"];
-      delete items.content;
-      delete items.guid;
-      items.image = {
+      delete itemWithImage.pubDate;
+      delete itemWithImage["content:encoded"];
+      delete itemWithImage["content:encodedSnippet"];
+      delete itemWithImage.content;
+      delete itemWithImage.guid;
+      itemWithImage.image = {
         small: items?.enclosure?.url,
         large: image,
       };
-      delete items.enclosure;
-      return items;
+      delete itemWithImage.enclosure;
+      return itemWithImage as RSSItemWithImage;
     });
 
-    let responseData: ResponseData = {
+    let responseData: CNNNewsResponse = {
       messages: "Result of all news in CNN News",
       total: data.length,
       data,
@@ -76,7 +64,7 @@ export async function GET(request: NextRequest) {
     if (searchParams) {
       const searchData = search(data, searchParams);
       let result: Item[] = [];
-      searchData.map((items) => result.push(items.item));
+      searchData.map((items: { item: Item }) => result.push(items.item));
       responseData = {
         messages: `Result of all news in CNN News with title search: ${searchParams}`,
         total: searchData.length,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query, queryOne } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
@@ -12,18 +12,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   try {
     const { username, role, status } = body;
 
-    await query(
-      "UPDATE users SET username = ?, role = ?, status = ? WHERE id = ?",
-      [username, role, status, id]
-    );
-
-    const updated = await queryOne<{
-      id: number;
-      username: string;
-      email: string;
-      role: string;
-      status: string;
-    }>("SELECT id, username, email, role, status FROM users WHERE id = ?", [id]);
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        username,
+        role,
+        status
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        status: true
+      }
+    });
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -55,7 +58,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
-    await query("DELETE FROM users WHERE id = ?", [id]);
+    await prisma.user.delete({
+      where: { id }
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting user:", error);

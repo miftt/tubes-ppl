@@ -1,13 +1,12 @@
 import { Item } from "rss-parser";
 import { parseRSS, replaceQueryParams, search } from "@/lib/rss-utils";
 import { NextResponse, NextRequest } from "next/server";
+import { RSSItemWithImage } from "@/types/rss";
 
 type ResponseData = {
   message: string;
   total?: number;
-  data?: ({
-    [key: string]: any;
-  } & Item)[];
+  data?: RSSItemWithImage[];
 };
 
 export async function GET(
@@ -24,23 +23,24 @@ export async function GET(
       url: CNN_NEWS_RSS.replace("{type}", type),
     });
 
-    const data = result.items.map((items) => {
+    const data = result.items.map((items: Item): RSSItemWithImage => {
+      const itemWithImage = items as any;
       const image = replaceQueryParams(
         items?.enclosure?.url as string,
         "q",
         "100"
       );
-      delete items.pubDate;
-      delete items["content:encoded"];
-      delete items["content:encodedSnippet"];
-      delete items.content;
-      delete items.guid;
-      items.image = {
+      delete itemWithImage.pubDate;
+      delete itemWithImage["content:encoded"];
+      delete itemWithImage["content:encodedSnippet"];
+      delete itemWithImage.content;
+      delete itemWithImage.guid;
+      itemWithImage.image = {
         small: items?.enclosure?.url,
         large: image,
       };
-      delete items.enclosure;
-      return items;
+      delete itemWithImage.enclosure;
+      return itemWithImage as RSSItemWithImage;
     });
 
     let responseData: ResponseData = {
@@ -52,7 +52,7 @@ export async function GET(
     if (searchParams) {
       const searchData = search(data, searchParams);
       let result: Item[] = [];
-      searchData.map((items) => result.push(items.item));
+      searchData.map((items: { item: Item }) => result.push(items.item));
       responseData = {
         message: `Result of type ${type} news in CNN News with title search: ${searchParams}`,
         total: searchData.length,

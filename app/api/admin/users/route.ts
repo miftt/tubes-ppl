@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const users = await query<{
-      id: number;
-      username: string;
-      email: string;
-      role: string;
-      status: string;
-    }>(
-      "SELECT id, username, email, role, status FROM users ORDER BY id DESC"
-    );
+    const users = await prisma.user.findMany({
+      orderBy: { id: 'desc' },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        status: true
+      }
+    });
 
     return NextResponse.json(users);
   } catch (error) {

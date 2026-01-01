@@ -3,19 +3,11 @@
 // ============================================
 
 import bcrypt from 'bcrypt';
-import { queryOne, query } from './db';
+import { prisma } from './prisma';
+import { User, UserRole, UserStatus } from '@prisma/client';
 
-// Interface untuk user dari database
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  password_hash: string;
-  role: 'Admin' | 'Editor' | 'Member';
-  status: 'Aktif' | 'Nonaktif';
-  full_name?: string;
-  avatar?: string;
-}
+// Type untuk user dengan password hash (untuk auth)
+export type UserWithPassword = Pick<User, 'id' | 'username' | 'email' | 'passwordHash' | 'role' | 'status' | 'fullName' | 'avatar'>;
 
 // Hash password menggunakan bcrypt dengan salt rounds 10
 // Ini menghasilkan hash yang aman seperti: $2b$10$...
@@ -35,32 +27,57 @@ export async function verifyPassword(
 // Cari user berdasarkan username atau email
 export async function getUserByUsernameOrEmail(
   identifier: string
-): Promise<User | null> {
-  const user = await queryOne<User>(
-    `SELECT id, username, email, password_hash, role, status, full_name, avatar 
-     FROM users 
-     WHERE (username = ? OR email = ?) AND status = 'Aktif'`,
-    [identifier, identifier]
-  );
+): Promise<UserWithPassword | null> {
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { username: identifier },
+        { email: identifier }
+      ],
+      status: UserStatus.Aktif
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      passwordHash: true,
+      role: true,
+      status: true,
+      fullName: true,
+      avatar: true
+    }
+  });
+  
   return user;
 }
 
 // Cari user berdasarkan ID
-export async function getUserById(id: number): Promise<User | null> {
-  const user = await queryOne<User>(
-    `SELECT id, username, email, password_hash, role, status, full_name, avatar 
-     FROM users 
-     WHERE id = ? AND status = 'Aktif'`,
-    [id]
-  );
+export async function getUserById(id: number): Promise<UserWithPassword | null> {
+  const user = await prisma.user.findFirst({
+    where: {
+      id,
+      status: UserStatus.Aktif
+    },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      passwordHash: true,
+      role: true,
+      status: true,
+      fullName: true,
+      avatar: true
+    }
+  });
+  
   return user;
 }
 
 // Update last login
 export async function updateLastLogin(userId: number): Promise<void> {
-  await query(
-    `UPDATE users SET last_login = NOW() WHERE id = ?`,
-    [userId]
-  );
+  await prisma.user.update({
+    where: { id: userId },
+    data: { lastLogin: new Date() }
+  });
 }
 

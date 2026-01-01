@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { BookmarkButton } from "./bookmark-button"
 
 interface NewsCardProps {
   title: string
@@ -15,7 +16,7 @@ interface NewsCardProps {
 
 export function NewsCard({ title, excerpt, image, category, date, featured, horizontal, link }: NewsCardProps) {
   const href = link || "#";
-  
+
   if (horizontal) {
     return (
       <Link href={href} target={link ? "_blank" : undefined} rel={link ? "noopener noreferrer" : undefined} className="group flex gap-4 items-start py-3 border-b last:border-0">
@@ -58,6 +59,18 @@ export function NewsCard({ title, excerpt, image, category, date, featured, hori
           <span className="absolute top-4 left-4 bg-background/90 backdrop-blur px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground">
             {category}
           </span>
+        )}
+        {/* Bookmark Button */}
+        {link && (
+          <div className="absolute top-4 right-4">
+            <BookmarkButton
+              articleLink={link}
+              articleTitle={title}
+              articleImage={image}
+              articleCategory={category}
+              articleDate={date}
+            />
+          </div>
         )}
       </div>
       <div className="flex flex-col gap-2">

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { query } from "@/lib/db"; 
+import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req: Request) {
   try {
@@ -12,7 +12,10 @@ export async function PATCH(req: Request) {
     const userId = (session.user as any).id;
 
     // Update Nama
-    await query("UPDATE users SET full_name = ? WHERE id = ?", [fullName, userId]);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { fullName }
+    });
 
     return NextResponse.json({ message: "Success" });
   } catch (error) {
