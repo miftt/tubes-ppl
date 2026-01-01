@@ -10,7 +10,7 @@ interface Subscriber {
 
 interface SubscriberTableProps {
   data: Subscriber[];
-  onDeleteRequest: (id: number) => void;
+  onDelete: (id: number) => void;
 }
 
 export default function SubscriberTable({ data, onDelete }: SubscriberTableProps) {

@@ -1,21 +1,57 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import SubscriberTable from "@/components/dashboard/SubscriberTable";
 import DeleteModal from "@/components/ui/DeleteModal"; 
 
+type Subscriber = {
+  id: number;
+  email: string;
+  joined: string;
+  status: string;
+};
+
 export default function SubscribersPage() {
-  // DATA SUBSCRIBER DIPINDAH KESINI
-  const [subscribers, setSubscribers] = useState([
-    { id: 1, email: "pembaca_setia@gmail.com", joined: "2024-01-10", status: "Aktif" },
-    { id: 2, email: "info_bisnis@yahoo.com", joined: "2024-01-12", status: "Aktif" },
-  ]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const confirmDelete = () => {
-    if (deleteId) setSubscribers(subscribers.filter(s => s.id !== deleteId));
-    setDeleteId(null);
+  // Load data real dari API admin
+  useEffect(() => {
+    const loadSubscribers = async () => {
+      try {
+        const res = await fetch("/api/admin/subscribers");
+        if (!res.ok) throw new Error("Gagal memuat data subscriber");
+        const data: Subscriber[] = await res.json();
+        setSubscribers(data);
+      } catch (error) {
+        console.error("Failed to load subscribers:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSubscribers();
+  }, []);
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      const res = await fetch(`/api/admin/subscribers/${deleteId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Gagal menghapus subscriber");
+
+      // Di UI kita hapus saja dari list
+      setSubscribers((prev) => prev.filter((s) => s.id !== deleteId));
+    } catch (error) {
+      console.error("Failed to delete subscriber:", error);
+    } finally {
+      setDeleteId(null);
+    }
   };
 
   return (
@@ -26,10 +62,14 @@ export default function SubscribersPage() {
       </div>
 
       <div className="w-full">
-         <SubscriberTable 
-           data={subscribers} 
-           onDelete={(id) => setDeleteId(id)} 
-         />
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Memuat data subscriber...</p>
+        ) : (
+          <SubscriberTable 
+            data={subscribers} 
+            onDelete={(id) => setDeleteId(id)} 
+          />
+        )}
       </div>
 
       <DeleteModal 
