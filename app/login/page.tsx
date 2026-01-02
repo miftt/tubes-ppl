@@ -42,8 +42,18 @@ function LoginForm() {
         setError(result.error);
         setLoading(false);
       } else if (result?.ok) {
-        // Redirect ke dashboard admin (akan di-handle oleh middleware berdasarkan role)
-        router.push("/admin/dashboard");
+        // Fetch session to get user role
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+
+        // Redirect based on role
+        const role = session?.user?.role;
+        if (role === "Admin" || role === "Editor") {
+          router.push("/admin/dashboard");
+        } else {
+          // Member or other roles go to home page
+          router.push("/");
+        }
         router.refresh();
       }
     } catch (err: any) {
