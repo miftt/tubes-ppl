@@ -2,14 +2,17 @@ import Link from "next/link"
 import Image from "next/image"
 import { Navbar } from "@/components/navbar"
 import { NewsCard } from "@/components/news-card"
-import { Item } from "rss-parser"
 import { notFound } from "next/navigation"
-import { parseRSS, replaceQueryParams } from "@/lib/rss-utils"
 
 // Force dynamic rendering for this page since it fetches live data
 export const dynamic = 'force-dynamic'
 
-interface NewsItem extends Item {
+interface NewsItem {
+  title?: string;
+  link?: string;
+  contentSnippet?: string;
+  content?: string;
+  isoDate?: string;
   image?: {
     small?: string;
     large?: string;
@@ -36,35 +39,23 @@ const CATEGORY_LABELS: Record<string, string> = {
   "gaya-hidup": "Gaya Hidup",
 };
 
-async function getCNNNewsByCategory(category: string) {
+async function getCNNNewsByCategory(category: string): Promise<NewsItem[]> {
   try {
-    const CNN_NEWS_RSS = `https://www.cnnindonesia.com/${category}/rss`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-    const result = await parseRSS({
-      url: CNN_NEWS_RSS,
+    const res = await fetch(`${baseUrl}/api/cnn/${category}`, {
+      cache: "no-store",
+      headers: { 'Content-Type': 'application/json' },
     });
 
-    const data = result.items.map((items: Item): NewsItem => {
-      const itemWithImage = items as any;
-      const image = replaceQueryParams(
-        items?.enclosure?.url as string,
-        "q",
-        "100"
-      );
-      delete itemWithImage.pubDate;
-      delete itemWithImage["content:encoded"];
-      delete itemWithImage["content:encodedSnippet"];
-      delete itemWithImage.content;
-      delete itemWithImage.guid;
-      itemWithImage.image = {
-        small: items?.enclosure?.url,
-        large: image,
-      };
-      delete itemWithImage.enclosure;
-      return itemWithImage as NewsItem;
-    });
+    if (!res.ok) {
+      console.error(`Error fetching CNN news for category ${category}: ${res.status}`);
+      return [];
+    }
 
-    return data;
+    const data = await res.json();
+    return data.data || [];
   } catch (error) {
     console.error(`Error fetching CNN news for category ${category}:`, error);
     return [];
@@ -113,7 +104,7 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const newsItems = await getCNNNewsByCategory(category) as NewsItem[];
+  const newsItems = await getCNNNewsByCategory(category);
   const categoryLabel = CATEGORY_LABELS[category] || category;
 
   // Get featured news (first item)

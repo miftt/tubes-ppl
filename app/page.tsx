@@ -2,48 +2,44 @@ import Link from "next/link"
 import Image from "next/image"
 import { Navbar } from "@/components/navbar"
 import { NewsCard } from "@/components/news-card"
-import { Item } from "rss-parser"
-import { parseRSS, replaceQueryParams } from "@/lib/rss-utils"
 
 // Force dynamic rendering for this page since it fetches live data
 export const dynamic = 'force-dynamic'
 
-interface NewsItem extends Item {
+interface NewsItem {
+  title?: string;
+  link?: string;
+  contentSnippet?: string;
+  content?: string;
+  isoDate?: string;
   image?: {
     small?: string;
     large?: string;
   };
 }
 
-async function getCNNNews() {
+async function getCNNNews(): Promise<NewsItem[]> {
   try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
     const categories = ['nasional', 'internasional', 'ekonomi', 'olahraga', 'teknologi', 'hiburan', 'gaya-hidup'];
 
-    // Fetch all categories in parallel directly from CNN RSS
+    // Fetch all categories in parallel from our internal API
     const promises = categories.map(async (category) => {
       try {
-        const CNN_NEWS_RSS = `https://www.cnnindonesia.com/${category}/rss`;
-        const result = await parseRSS({ url: CNN_NEWS_RSS });
-
-        return result.items.map((items: Item): NewsItem => {
-          const itemWithImage = items as any;
-          const image = replaceQueryParams(
-            items?.enclosure?.url as string,
-            "q",
-            "100"
-          );
-          delete itemWithImage.pubDate;
-          delete itemWithImage["content:encoded"];
-          delete itemWithImage["content:encodedSnippet"];
-          delete itemWithImage.content;
-          delete itemWithImage.guid;
-          itemWithImage.image = {
-            small: items?.enclosure?.url,
-            large: image,
-          };
-          delete itemWithImage.enclosure;
-          return itemWithImage as NewsItem;
+        const res = await fetch(`${baseUrl}/api/cnn/${category}`, {
+          cache: "no-store",
+          headers: { 'Content-Type': 'application/json' },
         });
+
+        if (!res.ok) {
+          console.error(`Error fetching category ${category}: ${res.status}`);
+          return [];
+        }
+
+        const data = await res.json();
+        return data.data || [];
       } catch (error) {
         console.error(`Error fetching category ${category}:`, error);
         return [];
@@ -109,7 +105,7 @@ function getCategoryFromLink(link?: string): string {
 }
 
 export default async function HomePage() {
-  const newsItems = await getCNNNews() as NewsItem[];
+  const newsItems = await getCNNNews();
 
   // Get featured news (first item)
   const featuredNews = newsItems.length > 0 ? newsItems[0] : null;

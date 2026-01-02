@@ -1,10 +1,14 @@
 import Link from "next/link"
 import { Navbar } from "@/components/navbar"
 import { NewsCard } from "@/components/news-card"
-import { Item } from "rss-parser"
 import { notFound } from "next/navigation"
 
-interface NewsItem extends Item {
+interface NewsItem {
+  title?: string;
+  link?: string;
+  contentSnippet?: string;
+  content?: string;
+  isoDate?: string;
   image?: {
     small?: string;
     large?: string;
@@ -13,37 +17,37 @@ interface NewsItem extends Item {
 
 async function searchCNNNews(query: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    
+
     // Search across all categories to get more results
     const categories = ['nasional', 'internasional', 'ekonomi', 'olahraga', 'teknologi', 'hiburan', 'gaya-hidup'];
-    
+
     // Fetch from all categories in parallel
     const promises = [
       fetch(`${baseUrl}/api/cnn?search=${encodeURIComponent(query)}&fetch=true`, {
         cache: "no-store",
         headers: { 'Content-Type': 'application/json' },
       }),
-      ...categories.map(category => 
+      ...categories.map(category =>
         fetch(`${baseUrl}/api/cnn/${category}?search=${encodeURIComponent(query)}`, {
           cache: "no-store",
           headers: { 'Content-Type': 'application/json' },
         })
       )
     ];
-    
+
     const responses = await Promise.allSettled(promises);
-    
+
     // Combine all search results
     const allResults: NewsItem[] = [];
     const seenLinks = new Set<string>();
-    
+
     for (const response of responses) {
       if (response.status === 'fulfilled' && response.value.ok) {
         const data = await response.value.json();
         const items = data.data || [];
-        
+
         // Add items that haven't been seen before (deduplicate)
         for (const item of items) {
           if (item.link && !seenLinks.has(item.link)) {
@@ -53,13 +57,13 @@ async function searchCNNNews(query: string) {
         }
       }
     }
-    
+
     return allResults;
   } catch (error) {
     console.error(`Error searching CNN news:`, error);
     // Fallback to single search
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
       const res = await fetch(`${baseUrl}/api/cnn?search=${encodeURIComponent(query)}&fetch=true`, {
         cache: "no-store",
@@ -111,7 +115,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>
 }) {
   const { q } = await searchParams;
-  
+
   if (!q || q.trim() === "") {
     return (
       <div className="min-h-screen flex flex-col">
