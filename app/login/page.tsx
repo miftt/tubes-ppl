@@ -23,21 +23,23 @@ function LoginForm() {
   useEffect(() => {
     if (status === "authenticated" && session) {
       const callbackUrl = searchParams.get("callbackUrl");
+      // Decode URL if it's encoded
+      const decodedCallbackUrl = callbackUrl ? decodeURIComponent(callbackUrl) : null;
       const role = session?.user?.role;
       
       if (role === "Admin" || role === "Editor") {
         // Admin/Editor: use callbackUrl if it's an admin path, otherwise dashboard
-        if (callbackUrl && callbackUrl.includes("/admin")) {
-          router.push(callbackUrl);
+        if (decodedCallbackUrl && decodedCallbackUrl.includes("/admin")) {
+          window.location.href = decodedCallbackUrl;
         } else {
-          router.push("/admin/dashboard");
+          window.location.href = "/admin/dashboard";
         }
       } else {
         // Member should go to home, not admin pages
-        router.push("/");
+        window.location.href = "/";
       }
     }
-  }, [status, session, router, searchParams]);
+  }, [status, session, searchParams]);
 
   // Check if user just registered
   useEffect(() => {
@@ -48,12 +50,16 @@ function LoginForm() {
 
   // Show loading while checking session
   if (status === "loading") {
-    return null; // Will show fallback from Suspense
+    return <LoginFormFallback />;
   }
 
   // Don't render login form if already authenticated (will redirect)
   if (status === "authenticated") {
-    return null;
+    return (
+      <div className="w-full max-w-md text-center">
+        <p className="text-muted-foreground">Mengalihkan...</p>
+      </div>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,7 +86,7 @@ function LoginForm() {
 
       if (result?.ok) {
         // Wait a bit for session to be updated
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Fetch updated session to get user role
         const sessionRes = await fetch("/api/auth/session", { cache: "no-store" });
@@ -90,10 +96,13 @@ function LoginForm() {
         // Determine redirect URL based on role and callbackUrl
         let redirectUrl = "/";
         
+        // Decode callbackUrl if it's URL encoded
+        const decodedCallbackUrl = callbackUrl ? decodeURIComponent(callbackUrl) : null;
+        
         if (role === "Admin" || role === "Editor") {
           // Admin/Editor: use callbackUrl if it's an admin path, otherwise dashboard
-          if (callbackUrl && callbackUrl.includes("/admin")) {
-            redirectUrl = callbackUrl;
+          if (decodedCallbackUrl && decodedCallbackUrl.includes("/admin")) {
+            redirectUrl = decodedCallbackUrl;
           } else {
             redirectUrl = "/admin/dashboard";
           }

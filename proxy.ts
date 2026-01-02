@@ -26,12 +26,22 @@ export default withAuth(
     if ((req.nextUrl.pathname === "/login" || req.nextUrl.pathname === "/register") && token) {
       // Get callbackUrl from query params if exists
       const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+      // Decode URL if it's encoded
+      const decodedCallbackUrl = callbackUrl ? decodeURIComponent(callbackUrl) : null;
       
       // Redirect berdasarkan role
       if (userRole === "Admin" || userRole === "Editor") {
         // Use callbackUrl if it's an admin path, otherwise go to dashboard
-        if (callbackUrl && callbackUrl.includes("/admin")) {
-          return NextResponse.redirect(new URL(callbackUrl, req.url));
+        if (decodedCallbackUrl && decodedCallbackUrl.includes("/admin")) {
+          // Validate that decodedCallbackUrl is a valid URL on same origin
+          try {
+            const url = new URL(decodedCallbackUrl, req.url);
+            if (url.origin === new URL(req.url).origin) {
+              return NextResponse.redirect(url);
+            }
+          } catch (e) {
+            // Invalid URL, fall through to default
+          }
         }
         return NextResponse.redirect(new URL("/admin/dashboard", req.url));
       } else {
