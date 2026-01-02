@@ -4,6 +4,7 @@ import { Navbar } from "@/components/navbar"
 import { NewsCard } from "@/components/news-card"
 import { Item } from "rss-parser"
 import { notFound } from "next/navigation"
+import { parseRSS, replaceQueryParams } from "@/lib/rss-utils"
 
 // Force dynamic rendering for this page since it fetches live data
 export const dynamic = 'force-dynamic'
@@ -37,22 +38,33 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 async function getCNNNewsByCategory(category: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const CNN_NEWS_RSS = `https://www.cnnindonesia.com/${category}/rss`;
 
-    const res = await fetch(`${baseUrl}/api/cnn/${category}`, {
-      cache: "no-store",
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const result = await parseRSS({
+      url: CNN_NEWS_RSS,
     });
 
-    if (!res.ok) {
-      throw new Error("Failed to fetch news");
-    }
+    const data = result.items.map((items: Item): NewsItem => {
+      const itemWithImage = items as any;
+      const image = replaceQueryParams(
+        items?.enclosure?.url as string,
+        "q",
+        "100"
+      );
+      delete itemWithImage.pubDate;
+      delete itemWithImage["content:encoded"];
+      delete itemWithImage["content:encodedSnippet"];
+      delete itemWithImage.content;
+      delete itemWithImage.guid;
+      itemWithImage.image = {
+        small: items?.enclosure?.url,
+        large: image,
+      };
+      delete itemWithImage.enclosure;
+      return itemWithImage as NewsItem;
+    });
 
-    const data = await res.json();
-    return data.data || [];
+    return data;
   } catch (error) {
     console.error(`Error fetching CNN news for category ${category}:`, error);
     return [];
