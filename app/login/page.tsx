@@ -46,15 +46,22 @@ function LoginForm() {
         const sessionRes = await fetch("/api/auth/session");
         const session = await sessionRes.json();
 
-        // Redirect based on role
+        // Get callbackUrl from query params
+        const callbackUrl = searchParams.get("callbackUrl");
+
+        // Redirect based on role - use window.location for full page reload
         const role = session?.user?.role;
         if (role === "Admin" || role === "Editor") {
-          router.push("/admin/dashboard");
+          // Admin/Editor: use callbackUrl if exists and is admin path, otherwise go to dashboard
+          if (callbackUrl && callbackUrl.includes("/admin")) {
+            window.location.href = callbackUrl;
+          } else {
+            window.location.href = "/admin/dashboard";
+          }
         } else {
-          // Member or other roles go to home page
-          router.push("/");
+          // Member or other roles always go to home page (not admin pages)
+          window.location.href = "/";
         }
-        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan saat login");
