@@ -5,6 +5,9 @@ import { NewsCard } from "@/components/news-card"
 import { Item } from "rss-parser"
 import { notFound } from "next/navigation"
 
+// Force dynamic rendering for this page since it fetches live data
+export const dynamic = 'force-dynamic'
+
 interface NewsItem extends Item {
   image?: {
     small?: string;
@@ -34,20 +37,20 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 async function getCNNNewsByCategory(category: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    
+
     const res = await fetch(`${baseUrl}/api/cnn/${category}`, {
       cache: "no-store",
       headers: {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!res.ok) {
       throw new Error("Failed to fetch news");
     }
-    
+
     const data = await res.json();
     return data.data || [];
   } catch (error) {
@@ -85,11 +88,6 @@ function getCategoryFromLink(link?: string): string {
   return "";
 }
 
-export async function generateStaticParams() {
-  return VALID_CATEGORIES.map((category) => ({
-    category: category,
-  }));
-}
 
 export default async function CategoryPage({
   params,
@@ -97,7 +95,7 @@ export default async function CategoryPage({
   params: Promise<{ category: string }>
 }) {
   const { category } = await params;
-  
+
   // Validate category
   if (!VALID_CATEGORIES.includes(category)) {
     notFound();
@@ -108,16 +106,16 @@ export default async function CategoryPage({
 
   // Get featured news (first item)
   const featuredNews = newsItems.length > 0 ? newsItems[0] : null;
-  
+
   // Get recent news (items 1-24 for much more content)
   const recentNews = newsItems.slice(1, 25);
-  
+
   // Get popular news titles (items 0-15 for more popular items)
   const popularNews = newsItems.slice(0, 15).map(item => ({
     title: item.title || "",
     link: item.link || "#",
   })).filter(item => item.title);
-  
+
   // Get recommendations (items 25-35 for more recommendations)
   const recommendations = newsItems.slice(25, 36);
 
@@ -177,9 +175,9 @@ export default async function CategoryPage({
               <h3 className="text-xs font-bold uppercase tracking-[0.3em] border-b pb-4 mb-6">Berita Terpopuler</h3>
               <div className="flex flex-col gap-6">
                 {popularNews.map((item, i) => (
-                  <Link 
-                    key={i} 
-                    href={item.link} 
+                  <Link
+                    key={i}
+                    href={item.link}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group flex gap-4 items-start"
@@ -244,11 +242,10 @@ export default async function CategoryPage({
                   <Link
                     key={cat.href}
                     href={cat.href}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-                      cat.href === `/${category}`
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted hover:bg-primary hover:text-primary-foreground"
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${cat.href === `/${category}`
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-primary hover:text-primary-foreground"
+                      }`}
                   >
                     {cat.label}
                   </Link>
