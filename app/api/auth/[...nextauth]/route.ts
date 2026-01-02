@@ -56,7 +56,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       // Initial sign in
       if (user) {
         token.id = user.id;
@@ -73,6 +73,30 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).username = token.username;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Handle redirect after login
+      // Decode callbackUrl if it's URL encoded
+      let redirectUrl = url;
+      
+      // If url is relative, make it absolute
+      if (url.startsWith("/")) {
+        redirectUrl = `${baseUrl}${url}`;
+      }
+      
+      // If url is on same origin, allow it
+      try {
+        const urlObj = new URL(redirectUrl);
+        if (urlObj.origin === baseUrl) {
+          // Check if it's admin route and validate role will be done by proxy
+          return redirectUrl;
+        }
+      } catch (e) {
+        // Invalid URL, use default
+      }
+      
+      // Default redirect to admin dashboard
+      return `${baseUrl}/admin/dashboard`;
     },
   },
   pages: {

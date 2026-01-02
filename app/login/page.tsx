@@ -9,7 +9,7 @@ import Link from "next/link";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -19,6 +19,26 @@ function LoginForm() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      const callbackUrl = searchParams.get("callbackUrl");
+      const role = session?.user?.role;
+      
+      if (role === "Admin" || role === "Editor") {
+        // Admin/Editor: use callbackUrl if it's an admin path, otherwise dashboard
+        if (callbackUrl && callbackUrl.includes("/admin")) {
+          router.push(callbackUrl);
+        } else {
+          router.push("/admin/dashboard");
+        }
+      } else {
+        // Member should go to home, not admin pages
+        router.push("/");
+      }
+    }
+  }, [status, session, router, searchParams]);
+
   // Check if user just registered
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
@@ -26,12 +46,26 @@ function LoginForm() {
     }
   }, [searchParams]);
 
+  // Show loading while checking session
+  if (status === "loading") {
+    return null; // Will show fallback from Suspense
+  }
+
+  // Don't render login form if already authenticated (will redirect)
+  if (status === "authenticated") {
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
+      // Get callbackUrl from query params
+      const callbackUrl = searchParams.get("callbackUrl");
+      
+      // Sign in without redirect first
       const result = await signIn("credentials", {
         username: formData.username,
         password: formData.password,
@@ -41,27 +75,35 @@ function LoginForm() {
       if (result?.error) {
         setError(result.error);
         setLoading(false);
-      } else if (result?.ok) {
-        // Fetch session to get user role
-        const sessionRes = await fetch("/api/auth/session");
+        return;
+      }
+
+      if (result?.ok) {
+        // Wait a bit for session to be updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Fetch updated session to get user role
+        const sessionRes = await fetch("/api/auth/session", { cache: "no-store" });
         const session = await sessionRes.json();
-
-        // Get callbackUrl from query params
-        const callbackUrl = searchParams.get("callbackUrl");
-
-        // Redirect based on role - use window.location for full page reload
         const role = session?.user?.role;
+
+        // Determine redirect URL based on role and callbackUrl
+        let redirectUrl = "/";
+        
         if (role === "Admin" || role === "Editor") {
-          // Admin/Editor: use callbackUrl if exists and is admin path, otherwise go to dashboard
+          // Admin/Editor: use callbackUrl if it's an admin path, otherwise dashboard
           if (callbackUrl && callbackUrl.includes("/admin")) {
-            window.location.href = callbackUrl;
+            redirectUrl = callbackUrl;
           } else {
-            window.location.href = "/admin/dashboard";
+            redirectUrl = "/admin/dashboard";
           }
         } else {
-          // Member or other roles always go to home page (not admin pages)
-          window.location.href = "/";
+          // Member should go to home, not admin pages
+          redirectUrl = "/";
         }
+
+        // Use window.location for full page reload to ensure session is properly set
+        window.location.href = redirectUrl;
       }
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan saat login");

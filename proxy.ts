@@ -22,12 +22,20 @@ export default withAuth(
       }
     }
 
-    // Jika sudah login dan mengakses halaman login/register
+    // Jika sudah login dan mengakses halaman login/register, redirect
     if ((req.nextUrl.pathname === "/login" || req.nextUrl.pathname === "/register") && token) {
+      // Get callbackUrl from query params if exists
+      const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+      
       // Redirect berdasarkan role
       if (userRole === "Admin" || userRole === "Editor") {
+        // Use callbackUrl if it's an admin path, otherwise go to dashboard
+        if (callbackUrl && callbackUrl.includes("/admin")) {
+          return NextResponse.redirect(new URL(callbackUrl, req.url));
+        }
         return NextResponse.redirect(new URL("/admin/dashboard", req.url));
       } else {
+        // Member should not access admin pages, redirect to home
         return NextResponse.redirect(new URL("/", req.url));
       }
     }
