@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link"; // <--- Import Link
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"; 
+import { getUserById } from "@/lib/auth";
 
 import { BiodataForm } from "@/components/profile/BiodataForm";
 import { SecurityForm } from "@/components/profile/SecurityForm";
@@ -20,7 +21,11 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  const user = session.user;
+  const sessionUser = session.user as any;
+  const dbUser = await getUserById(Number(sessionUser.id));
+  const displayName = dbUser?.fullName || sessionUser.name;
+  const displayEmail = dbUser?.email || sessionUser.email;
+  const displayRole = dbUser?.role || sessionUser.role || "Member";
 
   return (
     <div className="container max-w-6xl mx-auto py-10 px-4">
@@ -49,19 +54,19 @@ export default async function ProfilePage() {
             <CardHeader className="text-center pb-2">
               <div className="mx-auto mb-4 relative group">
                 <Avatar className="w-32 h-32 border-4 border-background shadow-xl">
-                  <AvatarImage src={(user as any).avatar || ""} />
+                  <AvatarImage src={dbUser?.avatar || ""} />
                   <AvatarFallback className="text-4xl bg-primary/10 text-primary">
-                    {user.name?.charAt(0).toUpperCase() || "U"}
+                    {(displayName || displayEmail || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full shadow-lg">
                   <Camera className="w-4 h-4" />
                 </div>
               </div>
-              <CardTitle className="text-xl">{user.name}</CardTitle>
-              <CardDescription>{user.email}</CardDescription>
+              <CardTitle className="text-xl">{displayName}</CardTitle>
+              <CardDescription>{displayEmail}</CardDescription>
               <div className="mt-4 flex justify-center gap-2">
-                <Badge variant="secondary">{(user as any).role || "Member"}</Badge>
+                <Badge variant="secondary">{displayRole}</Badge>
                 <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Aktif</Badge>
               </div>
             </CardHeader>
@@ -93,7 +98,7 @@ export default async function ProfilePage() {
             </TabsList>
 
             <TabsContent value="biodata">
-              <BiodataForm user={{ name: user.name, email: user.email }} />
+              <BiodataForm user={{ name: displayName, email: displayEmail }} />
             </TabsContent>
 
             <TabsContent value="security">

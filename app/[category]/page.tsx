@@ -220,23 +220,6 @@ export default async function CategoryPage({
               </div>
             </section>
 
-            {/* Newsletter */}
-            <div className="bg-primary p-8 text-primary-foreground rounded-sm">
-              <h3 className="font-serif text-2xl mb-2 italic">Briefing Pagi.</h3>
-              <p className="text-sm text-primary-foreground/70 mb-6">
-                Dapatkan berita terpenting setiap pagi langsung di email Anda.
-              </p>
-              <div className="flex flex-col gap-2">
-                <input
-                  type="email"
-                  placeholder="Email Anda"
-                  className="bg-primary-foreground/10 border-primary-foreground/20 rounded-none px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-foreground/30 placeholder:text-primary-foreground/40"
-                />
-                <button className="bg-primary-foreground text-primary py-2 text-xs font-bold uppercase tracking-widest hover:bg-primary-foreground/90 transition-colors">
-                  Langganan
-                </button>
-              </div>
-            </div>
 
             {/* Categories */}
             <section>
@@ -301,30 +284,6 @@ export default async function CategoryPage({
               </div>
             </section>
 
-            {/* Social Links */}
-            <section>
-              <h3 className="text-xs font-bold uppercase tracking-[0.3em] border-b pb-4 mb-4">Ikuti Kami</h3>
-              <div className="flex gap-3">
-                <Link
-                  href="#"
-                  className="flex-1 px-4 py-2 text-xs font-medium bg-muted hover:bg-primary hover:text-primary-foreground rounded-sm transition-colors text-center"
-                >
-                  Twitter
-                </Link>
-                <Link
-                  href="#"
-                  className="flex-1 px-4 py-2 text-xs font-medium bg-muted hover:bg-primary hover:text-primary-foreground rounded-sm transition-colors text-center"
-                >
-                  Facebook
-                </Link>
-                <Link
-                  href="#"
-                  className="flex-1 px-4 py-2 text-xs font-medium bg-muted hover:bg-primary hover:text-primary-foreground rounded-sm transition-colors text-center"
-                >
-                  Instagram
-                </Link>
-              </div>
-            </section>
           </aside>
         </div>
       </main>

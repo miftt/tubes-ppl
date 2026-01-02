@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LayoutDashboard, Users, Mail, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, Menu } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -21,8 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // MENU ITEMS: Link ke halaman terpisah (Bukan Scroll lagi)
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
-    { name: "Manajemen User", icon: Users, href: "/admin/users" },         // Halaman Baru
-    { name: "Subscriber", icon: Mail, href: "/admin/subscribers" },   // Halaman Baru
+    { name: "Manajemen User", icon: Users, href: "/admin/users" },
   ];
 
   return (

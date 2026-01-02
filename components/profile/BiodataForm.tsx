@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Mail, Loader2, Save } from "lucide-react";
+import { User, Mail, Loader2, Save, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
 
 interface BiodataFormProps {
@@ -18,6 +19,7 @@ export function BiodataForm({ user }: BiodataFormProps) {
   const { update } = useSession(); // Biar session di navbar langsung berubah
   const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState(user.name || "");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +37,7 @@ export function BiodataForm({ user }: BiodataFormProps) {
       // Update session client side tanpa reload
       await update({ name: name });
       
-      alert("Biodata berhasil disimpan!");
+      setShowSuccess(true);
       router.refresh();
     } catch (error) {
       alert("Terjadi kesalahan sistem.");
@@ -45,8 +47,23 @@ export function BiodataForm({ user }: BiodataFormProps) {
   };
 
   return (
-    <Card>
-      <form onSubmit={handleSubmit}>
+    <>
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              Biodata berhasil diperbarui
+            </DialogTitle>
+            <DialogDescription>
+              Perubahan nama lengkap kamu sudah disimpan.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Card>
+        <form onSubmit={handleSubmit}>
         <CardHeader>
           <CardTitle>Biodata Diri</CardTitle>
           <CardDescription>Atur informasi publik akun Anda.</CardDescription>
@@ -74,7 +91,8 @@ export function BiodataForm({ user }: BiodataFormProps) {
             Simpan Biodata
           </Button>
         </CardFooter>
-      </form>
-    </Card>
+        </form>
+      </Card>
+    </>
   );
 }
