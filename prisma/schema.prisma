@@ -55,7 +55,7 @@ model Article {
   @@index([isFeatured])
   @@index([publishedDate])
   @@index([sourceLink(length: 255)])
-  @@fulltext([title, excerpt, contentSnippet])
+  // Note: FULLTEXT index removed - TiDB Cloud doesn't support multi-column FULLTEXT indexes
   @@map("articles")
 }
 

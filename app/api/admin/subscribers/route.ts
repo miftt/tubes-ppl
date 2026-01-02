@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { SubscriberData } from "@/types/subscriber";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const subscribers = await prisma.subscriber.findMany({

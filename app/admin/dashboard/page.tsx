@@ -4,6 +4,9 @@ import { DownloadReport } from "@/components/admin/DownloadReport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, Mail } from "lucide-react";
 
+// Prevent static generation - this page requires database access
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: "Dashboard Admin | DANews" };
 
 export default async function AdminDashboard() {
@@ -62,9 +65,9 @@ export default async function AdminDashboard() {
 
       {/* Grafik (Bawah) */}
       <div className="grid gap-4 md:grid-cols-2">
-        <DashboardChart 
-          userData={stats.userChartData} 
-          subscriberData={stats.subscriberChartData} 
+        <DashboardChart
+          userData={stats.userChartData}
+          subscriberData={stats.subscriberChartData}
         />
       </div>
     </div>
