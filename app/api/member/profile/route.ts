@@ -9,12 +9,17 @@ export async function PATCH(req: Request) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { fullName } = await req.json();
-    const userId = (session.user as any).id;
+    const rawId = (session.user as any).id;
+    const userId = Number(rawId);
 
-    // Update Nama
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return NextResponse.json({ error: "ID user tidak valid" }, { status: 400 });
+    }
+
+    // Update Nama Lengkap di kolom full_name
     await prisma.user.update({
       where: { id: userId },
-      data: { fullName }
+      data: { fullName },
     });
 
     return NextResponse.json({ message: "Success" });

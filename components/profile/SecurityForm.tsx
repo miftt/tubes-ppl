@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, Loader2, KeyRound } from "lucide-react";
+import { Lock, Loader2, KeyRound, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export function SecurityForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ current: "", new: "", confirm: "" });
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -23,7 +25,7 @@ export function SecurityForm() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/member/password", {
+      const res = await fetch("/api/member/profile/password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -35,7 +37,7 @@ export function SecurityForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal ganti password");
 
-      alert("Password berhasil diubah!");
+      setShowSuccess(true);
       setFormData({ current: "", new: "", confirm: "" }); // Reset form
     } catch (error: any) {
       alert(error.message);
@@ -45,8 +47,23 @@ export function SecurityForm() {
   };
 
   return (
-    <Card>
-      <form onSubmit={handleSubmit}>
+    <>
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              Password berhasil diubah
+            </DialogTitle>
+            <DialogDescription>
+              Password baru kamu sudah tersimpan. Gunakan password ini saat login berikutnya.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Card>
+        <form onSubmit={handleSubmit}>
         <CardHeader>
           <CardTitle>Keamanan & Password</CardTitle>
           <CardDescription>Pastikan menggunakan password yang kuat.</CardDescription>
@@ -79,7 +96,8 @@ export function SecurityForm() {
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Update Password"}
           </Button>
         </CardFooter>
-      </form>
-    </Card>
+        </form>
+      </Card>
+    </>
   );
 }

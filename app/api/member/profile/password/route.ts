@@ -13,7 +13,12 @@ export async function PATCH(req: Request) {
     }
 
     const { currentPassword, newPassword } = await req.json();
-    const userId = (session.user as any).id;
+    const rawId = (session.user as any).id;
+    const userId = Number(rawId);
+
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return NextResponse.json({ error: "ID user tidak valid" }, { status: 400 });
+    }
 
     if (!currentPassword || !newPassword) {
       return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });

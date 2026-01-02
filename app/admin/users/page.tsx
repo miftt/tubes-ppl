@@ -16,6 +16,8 @@ type User = {
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
 
   // STATE MODAL
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -26,9 +28,14 @@ export default function UsersPage() {
     const loadUsers = async () => {
       try {
         const res = await fetch("/api/admin/users");
-        if (!res.ok) throw new Error("Gagal memuat data user");
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          console.error("Admin /api/admin/users error:", res.status, text);
+          throw new Error("Gagal memuat data user");
+        }
         const data: User[] = await res.json();
         setUsers(data);
+        setCurrentPage(1);
       } catch (error) {
         console.error("Failed to load users:", error);
       } finally {
@@ -59,6 +66,7 @@ export default function UsersPage() {
       }
 
       setUsers((prev) => prev.filter((u) => u.id !== deleteId));
+      setCurrentPage(1);
     } catch (error) {
       console.error("Failed to delete user:", error);
     } finally {
@@ -98,6 +106,10 @@ export default function UsersPage() {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(users.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedUsers = users.slice(startIndex, startIndex + pageSize);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       <div>
@@ -109,11 +121,37 @@ export default function UsersPage() {
         {loading ? (
           <p className="text-sm text-muted-foreground">Memuat data pengguna...</p>
         ) : (
-          <UserTable 
-            data={users} 
-            onDeleteRequest={(id) => setDeleteId(id)} 
-            onEditRequest={(id) => setEditUser(users.find((u) => u.id === id) || null)} 
-          />
+          <>
+            <UserTable 
+              data={paginatedUsers} 
+              onDeleteRequest={(id) => setDeleteId(id)} 
+              onEditRequest={(id) => setEditUser(users.find((u) => u.id === id) || null)} 
+            />
+
+            {/* Pagination */}
+            {users.length > pageSize && (
+              <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  Menampilkan {startIndex + 1}-{Math.min(startIndex + pageSize, users.length)} dari {users.length} pengguna
+                </span>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`min-w-7 h-7 px-2 rounded border text-[11px] font-semibold transition-colors ${
+                        page === currentPage
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-border"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -20,13 +20,12 @@ export function DownloadReport({ stats }: { stats: any }) {
     doc.setFontSize(11);
     doc.text(`Dicetak pada: ${new Date().toLocaleString()}`, 14, 30);
 
-    // 3. Isi Tabel Data
+    // 3. Isi Tabel Data (User & Bookmark)
     const tableData = [
       ["Parameter", "Jumlah"],
       ["Total Pengguna Terdaftar", String(stats.totalUsers ?? 0)],
       ["Pengguna Status Aktif", String(stats.activeUsers ?? 0)],
-      ["Total Subscriber", String(stats.totalSubscribers ?? 0)],
-      ["Subscriber Aktif", String(stats.activeSubscribers ?? 0)],
+      ["Total Berita Tersimpan (Bookmark)", String(stats.totalBookmarks ?? 0)],
     ];
 
     // 4. Generate Tabel
@@ -89,12 +88,8 @@ export function DownloadReport({ stats }: { stats: any }) {
                       <td className="px-4 py-2 text-right font-semibold">{stats.activeUsers ?? 0}</td>
                     </tr>
                     <tr className="border-t">
-                      <td className="px-4 py-2">Total Subscriber</td>
-                      <td className="px-4 py-2 text-right font-semibold">{stats.totalSubscribers ?? 0}</td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="px-4 py-2">Subscriber Aktif</td>
-                      <td className="px-4 py-2 text-right font-semibold">{stats.activeSubscribers ?? 0}</td>
+                      <td className="px-4 py-2">Total Berita Tersimpan (Bookmark)</td>
+                      <td className="px-4 py-2 text-right font-semibold">{stats.totalBookmarks ?? 0}</td>
                     </tr>
                   </tbody>
                 </table>

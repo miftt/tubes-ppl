@@ -40,7 +40,6 @@ export default function EditModal({ isOpen, userData, onClose, onSave }: any) {
               className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
             >
               <option value="Admin">Admin</option>
-              <option value="Editor">Editor</option>
               <option value="Member">Member</option>
             </select>
           </div>

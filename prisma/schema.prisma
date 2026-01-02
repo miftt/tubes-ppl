@@ -157,7 +157,6 @@ model Bookmark {
 // Enums
 enum UserRole {
   Admin
-  Editor
   Member
 }
 
